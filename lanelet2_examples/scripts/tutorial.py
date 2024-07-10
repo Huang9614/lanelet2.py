@@ -315,16 +315,41 @@ def part7selftry():
 
     # read map from file
     print("load map from file")
-    utm_projector = UtmProjector(lanelet2.io.Origin(49, 8.4))
+    # set node 40736 as origin
+    projector = UtmProjector(lanelet2.io.Origin(49.00535119589, 8.41556206437))
+    #projector = LocalCartesianProjector(lanelet2.io.Origin(49.00535119589, 8.41556206437))
 
-    example_map, load_errors = lanelet2.io.loadRobust(example_file, utm_projector)
+    # example_map, load_errors = lanelet2.io.loadRobust(example_file, utm_projector)
+    example_map, load_errors = lanelet2.io.loadRobust(example_file, projector)
     print(type(example_map))
     print("number of laneletLayer is: ", len(example_map.laneletLayer))
 
 
     ## query map information
-    lanelets = example_map.pointLayer
-    print(len(lanelets))
+    points = example_map.pointLayer
+    lanelets = example_map.laneletLayer
+    areas = example_map.areaLayer
+    print(len(points))
+    print(type(lanelets))
+    print(len(areas))
+
+    # get the actually closest <primitive_type>
+
+    ## find the nearest lanelet around node 40736(origin)
+    neighbor = lanelet2.geometry.findNearest(lanelets, BasicPoint2d(0,0),2)
+    print(neighbor[0])
+    print(type(neighbor[0][1]))
+
+    ### TODO: get the adjecent lanelets
+
+    neighbor = lanelet2.geometry.findNearest(points, BasicPoint2d(0, 0), 2)
+    neighbor2 = example_map.pointLayer.nearest(BasicPoint2d(0, 0), 2)
+    # assert neighbor == neighbor2
+    print(neighbor)
+    print(neighbor2)
+
+
+
 
 
 
