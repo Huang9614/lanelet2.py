@@ -7,6 +7,8 @@ from lanelet2.core import (AllWayStop, AttributeMap, BasicPoint2d,
                            BoundingBox2d, Lanelet, LaneletMap,
                            LaneletWithStopLine, LineString3d, Point2d, Point3d,
                            RightOfWay, TrafficLight, getId)
+import lanelet2.core
+import lanelet2.geometry
 from lanelet2.projection import (UtmProjector, MercatorProjector,
                                  LocalCartesianProjector, GeocentricProjector)
 
@@ -30,6 +32,7 @@ def tutorial():
     part4reading_and_writing()
     part5traffic_rules()
     part6routing()
+    part7selftry()
 
 
 def part1primitives():
@@ -61,6 +64,7 @@ def part1primitives():
     assert ls_inv[0] == p2
     ls.append(Point3d(getId(), 2, 0, 0))
     del ls[2]
+
 
 
 def part2regulatory_elements():
@@ -193,6 +197,7 @@ def part4reading_and_writing():
     assert not load_errors
     assert loadedMap.laneletLayer.exists(lanelet.id)
 
+    '''
     ## GeocentricProjector: the origin is the centre of the Earth
     gc_projector = GeocentricProjector()
     write_errors = lanelet2.io.writeRobust(path, map, gc_projector)
@@ -200,7 +205,7 @@ def part4reading_and_writing():
     loadedMap, load_errors = lanelet2.io.loadRobust(path, gc_projector)
     assert not load_errors
     assert loadedMap.laneletLayer.exists(lanelet.id)
-
+    '''
 
 def part5traffic_rules():
     # this is just as you would expect
@@ -266,8 +271,61 @@ def get_linestring_at_y(y):
 
 def get_a_lanelet(index=0):
     return Lanelet(getId(),
-                   get_linestring_at_y(2+index),
+                   get_linestring_at_y(3+index),
                    get_linestring_at_y(0+index))
+
+
+def part7selftry():
+
+    # ---------- primitive4 lanelet ---------
+    print("primitive_lanelet")
+    primitive_lanelet = get_a_lanelet(2)
+
+    # get left&right bound
+    right = primitive_lanelet.rightBound
+    left = primitive_lanelet.leftBound
+    print(right)
+    print(left)
+    # TODO: primitive_lanelet.setLeftBound(new_left)
+
+    # TODO: get centerline
+    primitive_lanelet.resetCache
+    centerline = primitive_lanelet.centerline
+    #print(type(centerline))
+    print(centerline)
+
+    # invert lanelet = switch left bound and right bound, also inverse the point order in each bound
+    primitive_lanelet_inv = primitive_lanelet.invert()
+    print(primitive_lanelet_inv.rightBound)
+    print(primitive_lanelet_inv.leftBound)
+
+    # TODO: constLanelet
+
+
+    # ---------- lanelet_map --------------
+    print("lanelet_map")
+    lanelet = get_a_lanelet(7)
+    map = LaneletMap()
+    map.add(lanelet)
+
+    # check the length of each type layer
+    print(len(map.laneletLayer))
+    # check whether one type layer exist or not
+    assert map.laneletLayer.exists
+
+    # read map from file
+    print("load map from file")
+    utm_projector = UtmProjector(lanelet2.io.Origin(49, 8.4))
+
+    example_map, load_errors = lanelet2.io.loadRobust(example_file, utm_projector)
+    print(type(example_map))
+    print("number of laneletLayer is: ", len(example_map.laneletLayer))
+
+
+    ## query map information
+    lanelets = example_map.pointLayer
+    print(len(lanelets))
+
 
 
 if __name__ == '__main__':
