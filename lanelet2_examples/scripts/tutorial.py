@@ -280,6 +280,7 @@ def part7selftry():
     # ---------- primitive4 lanelet ---------
     print("primitive_lanelet")
     primitive_lanelet = get_a_lanelet(2)
+    print("primitive_lanelet: ", primitive_lanelet)
 
     # get left&right bound
     right = primitive_lanelet.rightBound
@@ -325,16 +326,24 @@ def part7selftry():
     #* every layer behaves similar to an unordered map: we can iterate over the primitives or look them up by their id:
     print(type(points))
     # check the size of each layer
-    print(len(points))
-    # check whether one type layer exist or not
-    assert points.exists
+    print(len(lanelets))
+    # check whether the specific lanelet member exists or not
+    assert lanelets.exists(45112)
 
-    #* TODO: How to iterate over the primitives and look them up by their id
-    points.find
+    #* iterate over the primitives
+    lanelet_layer_list = []
+    for each_lanelet in lanelets:
+        lanelet_layer_list.append(each_lanelet)
+    print(len(lanelet_layer_list))
+    print(lanelet_layer_list[102].id)
+
+    #* select the lanelet with lanelet_id?
+    print(lanelets[45112])
+
 
 
     # get the actually closest <primitive_type>
-
+    '''
     ## find the nearest lanelet around node 40736(origin)
     neighbor = lanelet2.geometry.findNearest(lanelets, BasicPoint2d(0,0),2)
     print(neighbor[0])
@@ -347,7 +356,7 @@ def part7selftry():
     # assert neighbor == neighbor2
     print(neighbor)
     print(neighbor2)
-
+    '''
 
 
 
