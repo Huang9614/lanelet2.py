@@ -303,10 +303,10 @@ def part7selftry():
     # TODO: constLanelet
 
 
-    # ---------- lanelet_map --------------
+    # ---------- 03_lanelet_map --------------
 
     #* read map from file
-    print("load map from file")
+    print(" *** load map from file ***")
 
     # set node 40736 as origin
     projector = UtmProjector(lanelet2.io.Origin(49.00535119589, 8.41556206437))
@@ -314,19 +314,17 @@ def part7selftry():
 
     # example_map, load_errors = lanelet2.io.loadRobust(example_file, utm_projector)
     example_map, load_errors = lanelet2.io.loadRobust(example_file, projector)
-    print(type(example_map))
+    # print(type(example_map))
     print("number of laneletLayer is: ", len(example_map.laneletLayer))
 
 
     #* maps are arranged into layers, one for each primitive type
     points = example_map.pointLayer
     lanelets = example_map.laneletLayer
-    areas = example_map.areaLayer
 
     #* every layer behaves similar to an unordered map: we can iterate over the primitives or look them up by their id:
-    print(type(points))
     # check the size of each layer
-    print(len(lanelets))
+    print(f"Totally, there are {len(lanelets)} lanelets in the example_map.")
     # check whether the specific lanelet member exists or not
     assert lanelets.exists(45112)
 
@@ -334,30 +332,32 @@ def part7selftry():
     lanelet_layer_list = []
     for each_lanelet in lanelets:
         lanelet_layer_list.append(each_lanelet)
-    print(len(lanelet_layer_list))
-    print(lanelet_layer_list[102].id)
+    print(f"All Layers are iterable, we convert the example_map.laneletLayer from {type(lanelets)} into a {type(lanelet_layer_list)}")
+
+    lanelet_45112 = lanelet_layer_list[102]
 
     #* select the lanelet with lanelet_id?
-    print(lanelets[45112])
+    print(f"We can select a primitive by using primitive_id: lanelets[45112] is {lanelets[45112]}")
 
+    #* quering primitive by relation
+    leftbound_45112 = lanelet_45112.leftBound
 
+    lanelet_45112_found_by_leftBId = lanelets.findUsages(leftbound_45112)
+    # assert lanelet_45112 == lanelet_45112_found_by_leftBId
+    print("lanelet_45112 got by findUsages is: ", lanelet_45112_found_by_leftBId)
+    print("lanelet_45112 got by lanelets[lanelet_id] is:  ", lanelet_45112)
+
+    #* quering primitive by position - additional
 
     # get the actually closest <primitive_type>
-    '''
+
     ## find the nearest lanelet around node 40736(origin)
     neighbor = lanelet2.geometry.findNearest(lanelets, BasicPoint2d(0,0),2)
-    print(neighbor[0])
-    print(type(neighbor[0][1]))
+    print(f"We can find the any ACTUALLY nearest primitives around a point by lanelets.geometry.findNearest function.\nPoint 40736 belongs to lanelet {neighbor[0][1].id}, and the nearest lanelet is {neighbor[1][1].id}")
 
-    ### TODO: get the adjecent lanelets
-
-    neighbor = lanelet2.geometry.findNearest(points, BasicPoint2d(0, 0), 2)
-    neighbor2 = example_map.pointLayer.nearest(BasicPoint2d(0, 0), 2)
+    neighbor2 = lanelets.nearest(BasicPoint2d(0, 0), 1)
     # assert neighbor == neighbor2
-    print(neighbor)
-    print(neighbor2)
-    '''
-
+    print(f"We can also use the method of layer itself: lanlets.nearest() to find the nearest lanelet around point 40736, but returns different lanelet {neighbor2[0].id}")
 
 
 
