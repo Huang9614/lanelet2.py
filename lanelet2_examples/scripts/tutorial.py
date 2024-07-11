@@ -4,11 +4,13 @@ import tempfile
 
 import lanelet2
 from lanelet2.core import (AllWayStop, AttributeMap, BasicPoint2d,
-                           BoundingBox2d, Lanelet, LaneletMap,
-                           LaneletWithStopLine, LineString3d, Point2d, Point3d,
+                           BoundingBox2d, Lanelet, ConstLanelet, LaneletMap,
+                           LaneletWithStopLine, LineString3d, ConstLineString3d, Point2d, Point3d,
                            RightOfWay, TrafficLight, getId)
 import lanelet2.core
 import lanelet2.geometry
+from lanelet2.matching import (Pose2d, ObjectWithCovariance2d, getDeterministicMatches, getProbabilisticMatches)
+import lanelet2.matching
 from lanelet2.projection import (UtmProjector, MercatorProjector,
                                  LocalCartesianProjector, GeocentricProjector)
 
@@ -32,7 +34,8 @@ def tutorial():
     part4reading_and_writing()
     part5traffic_rules()
     part6routing()
-    part7selftry()
+    # part7selftry()
+    part8matching()
 
 
 def part1primitives():
@@ -278,7 +281,6 @@ def get_a_lanelet(index=0):
 def part7selftry():
 
     # ---------- primitive4 lanelet ---------
-    print("primitive_lanelet")
     primitive_lanelet = get_a_lanelet(2)
     print("primitive_lanelet: ", primitive_lanelet)
 
@@ -286,14 +288,30 @@ def part7selftry():
     right = primitive_lanelet.rightBound
     left = primitive_lanelet.leftBound
     print("right boundary", right)
-    print(left)
+    print("left boundary", left)
+    assert left == primitive_lanelet.leftBound
     # TODO: primitive_lanelet.setLeftBound(new_left)
+    # set left&right boundary
+    new_left = get_linestring_at_y(3)
+    primitive_lanelet.leftBound = new_left
+    assert primitive_lanelet.leftBound == new_left
 
     # TODO: get centerline
-    primitive_lanelet.resetCache
     centerline = primitive_lanelet.centerline
-    #print(type(centerline))
-    print(centerline)
+    centerline2 = primitive_lanelet.centerline # from the cache
+    assert centerline == centerline2
+    print("centerline: ", centerline)
+
+    # reset the boundary will change the centerline
+    primitive_lanelet.leftBound = left
+    centerline3 = primitive_lanelet.centerline
+    assert centerline3 != centerline
+
+    # have to reset the cache everytime when you update at the boundary level
+    left.append(Point3d(getId(), 4, 0, 0))
+    assert centerline3 == primitive_lanelet.centerline # centerline is still the same, which is wrong
+    primitive_lanelet.resetCache()
+    assert centerline3 != primitive_lanelet.centerline
 
     # invert lanelet = switch left bound and right bound, also inverse the point order in each bound
     primitive_lanelet_inv = primitive_lanelet.invert()
@@ -301,6 +319,7 @@ def part7selftry():
     print(primitive_lanelet_inv.leftBound)
 
     # TODO: constLanelet
+    laneletConst = ConstLanelet(primitive_lanelet)
 
 
     # ---------- lanelet_map --------------
@@ -314,7 +333,7 @@ def part7selftry():
 
     # example_map, load_errors = lanelet2.io.loadRobust(example_file, utm_projector)
     example_map, load_errors = lanelet2.io.loadRobust(example_file, projector)
-    print(type(example_map))
+    print("type of the map: ", type(example_map))
     print("number of laneletLayer is: ", len(example_map.laneletLayer))
 
 
@@ -324,9 +343,11 @@ def part7selftry():
     areas = example_map.areaLayer
 
     #* every layer behaves similar to an unordered map: we can iterate over the primitives or look them up by their id:
-    print(type(points))
+    aPoint = points
+    print("type of points: ", type(points))
+    print(dir(points))
     # check the size of each layer
-    print(len(lanelets))
+    print("number of lanelets in the map: ", len(lanelets))
     # check whether the specific lanelet member exists or not
     assert lanelets.exists(45112)
 
@@ -357,6 +378,25 @@ def part7selftry():
     print(neighbor)
     print(neighbor2)
     '''
+
+def part8matching():
+    projector = UtmProjector(lanelet2.io.Origin(49, 8.4))
+    map = lanelet2.io.load(example_file, projector)
+    assert map.laneletLayer.exists(42440)
+    
+    # create an object
+    obj = ObjectWithCovariance2d()
+    translation = lanelet2.geometry.to2D(map.pointLayer[41656])
+    yaw = 150. / 180. *  3.1415926
+    obj.pose = Pose2d(translation.x, translation.y, yaw)
+    # obj.absoluteHull = 
+
+    matches = getDeterministicMatches(map, obj, 4.)
+    print("number of the matches: ", len(matches))
+
+    # matches are ordered by distance
+    for i in range(1, len(matches)):
+        assert matches
 
 
 
