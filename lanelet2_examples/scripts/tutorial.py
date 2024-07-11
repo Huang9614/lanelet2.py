@@ -303,21 +303,13 @@ def part7selftry():
 
 
     # ---------- lanelet_map --------------
-    print("lanelet_map")
-    lanelet = get_a_lanelet(7)
-    map = LaneletMap()
-    map.add(lanelet)
 
-    # check the length of each type layer
-    print(len(map.laneletLayer))
-    # check whether one type layer exist or not
-    assert map.laneletLayer.exists
-
-    # read map from file
+    #* read map from file
     print("load map from file")
+
     # set node 40736 as origin
     projector = UtmProjector(lanelet2.io.Origin(49.00535119589, 8.41556206437))
-    #projector = LocalCartesianProjector(lanelet2.io.Origin(49.00535119589, 8.41556206437))
+    # projector = LocalCartesianProjector(lanelet2.io.Origin(49.00535119589, 8.41556206437))
 
     # example_map, load_errors = lanelet2.io.loadRobust(example_file, utm_projector)
     example_map, load_errors = lanelet2.io.loadRobust(example_file, projector)
@@ -325,13 +317,21 @@ def part7selftry():
     print("number of laneletLayer is: ", len(example_map.laneletLayer))
 
 
-    ## query map information
+    #* maps are arranged into layers, one for each primitive type
     points = example_map.pointLayer
     lanelets = example_map.laneletLayer
     areas = example_map.areaLayer
+
+    #* every layer behaves similar to an unordered map: we can iterate over the primitives or look them up by their id:
+    print(type(points))
+    # check the size of each layer
     print(len(points))
-    print(type(lanelets))
-    print(len(areas))
+    # check whether one type layer exist or not
+    assert points.exists
+
+    #* TODO: How to iterate over the primitives and look them up by their id
+    points.find
+
 
     # get the actually closest <primitive_type>
 
