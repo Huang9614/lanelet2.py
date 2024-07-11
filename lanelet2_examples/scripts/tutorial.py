@@ -285,7 +285,7 @@ def part7selftry():
     # get left&right bound
     right = primitive_lanelet.rightBound
     left = primitive_lanelet.leftBound
-    print(right)
+    print("right boundary", right)
     print(left)
     # TODO: primitive_lanelet.setLeftBound(new_left)
 
