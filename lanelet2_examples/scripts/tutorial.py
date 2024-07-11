@@ -300,7 +300,6 @@ def part7selftry():
     print(primitive_lanelet_inv.rightBound)
     print(primitive_lanelet_inv.leftBound)
 
-    # TODO: constLanelet
 
 
     # ---------- 03_lanelet_map --------------
@@ -332,20 +331,21 @@ def part7selftry():
     lanelet_layer_list = []
     for each_lanelet in lanelets:
         lanelet_layer_list.append(each_lanelet)
-    print(f"All Layers are iterable, we convert the example_map.laneletLayer from {type(lanelets)} into a {type(lanelet_layer_list)}")
+    print(f"All Layers are iterable, we convert the example_map.laneletLayer from {type(lanelets)} into a {type(lanelet_layer_list)} to check the lanelet_id in the laneletLayer")
 
-    lanelet_45112 = lanelet_layer_list[102]
 
-    #* select the lanelet with lanelet_id?
-    print(f"We can select a primitive by using primitive_id: lanelets[45112] is {lanelets[45112]}")
+    #* select a specific lanelet with lanelet_id from laneletLayer
+    lanelet_45064 = lanelets[45064]
+    lanelet_45064_get = lanelets.get(45064)
+    assert lanelet_45064 == lanelet_45064_get
 
     #* quering primitive by relation
-    leftbound_45112 = lanelet_45112.leftBound
+    leftbound_45064 = lanelet_45064.leftBound
 
-    lanelet_45112_found_by_leftBId = lanelets.findUsages(leftbound_45112)
+    lanelet_45064_found_by_leftBId = lanelets.findUsages(leftbound_45064)
     # assert lanelet_45112 == lanelet_45112_found_by_leftBId
-    print("lanelet_45112 got by findUsages is: ", lanelet_45112_found_by_leftBId)
-    print("lanelet_45112 got by lanelets[lanelet_id] is:  ", lanelet_45112)
+    print("lanelet_45064 got by findUsages is: ", lanelet_45064_found_by_leftBId)
+    print("lanelet_45064 got by lanelets[lanelet_id] is:  ", lanelet_45064)
 
     #* quering primitive by position - additional
 
@@ -360,6 +360,22 @@ def part7selftry():
     print(f"We can also use the method of layer itself: lanlets.nearest() to find the nearest lanelet around point 40736, but returns different lanelet {neighbor2[0].id}")
 
 
+    # --------- 06_routing -----------
+    traffic_rules = lanelet2.traffic_rules.create(lanelet2.traffic_rules.Locations.Germany,
+                                                  lanelet2.traffic_rules.Participants.Vehicle)
+    graph = lanelet2.routing.RoutingGraph(example_map, traffic_rules)
+
+    #* check the neighborhood of specific lanelet_45064
+    right_reachable_lanelet_id = graph.right(lanelet_45064).id
+    print("The id of the right reachable lanelet of lanelet_45064 is: ", right_reachable_lanelet_id)
+    # right_non_reachable_lanelet_id = graph.adjacentRight(lanelet_45064)
+    # assert right_non_reachable_lanelet_id, "no non_reachable lanelet availabel!"
+    besides_lanelets = graph.besides(lanelet_45064)
+    print(besides_lanelets)
+
+
+    following_lanlets = graph.following(lanelet_45064)
+    print(len(following_lanlets))
 
 
 if __name__ == '__main__':
