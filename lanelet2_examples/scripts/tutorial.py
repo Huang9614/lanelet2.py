@@ -9,10 +9,12 @@ from lanelet2.core import (AllWayStop, AttributeMap, BasicPoint2d,
                            RightOfWay, TrafficLight, getId)
 import lanelet2.core
 import lanelet2.geometry
-from lanelet2.matching import (Pose2d, ObjectWithCovariance2d, getDeterministicMatches, getProbabilisticMatches)
+from lanelet2.matching import (Pose2d, ObjectWithCovariance2d, PositionCovariance2d, getDeterministicMatches, getProbabilisticMatches)
 import lanelet2.matching
 from lanelet2.projection import (UtmProjector, MercatorProjector,
                                  LocalCartesianProjector, GeocentricProjector)
+import lanelet2.routing
+import lanelet2.traffic_rules
 
 
 example_file = os.path.join(os.path.dirname(os.path.abspath(
@@ -35,7 +37,8 @@ def tutorial():
     part5traffic_rules()
     part6routing()
     # part7selftry()
-    part8matching()
+    part8routing()
+    # part9matching()
 
 
 def part1primitives():
@@ -226,25 +229,25 @@ def part6routing():
     map = lanelet2.io.load(example_file, projector)
     traffic_rules = lanelet2.traffic_rules.create(lanelet2.traffic_rules.Locations.Germany,
                                                   lanelet2.traffic_rules.Participants.Vehicle)
-    graph = lanelet2.routing.RoutingGraph(map, traffic_rules)
+    routing_graph = lanelet2.routing.RoutingGraph(map, traffic_rules)
     lanelet = map.laneletLayer[4984315]
     toLanelet = map.laneletLayer[2925017]
-    assert graph.following(lanelet)
-    assert len(graph.reachableSet(lanelet, 100, 0)) > 10
-    assert len(graph.possiblePaths(lanelet, 100, 0, False)) == 1
+    assert routing_graph.following(lanelet)
+    assert len(routing_graph.reachableSet(lanelet, 100, 0)) > 10
+    assert len(routing_graph.possiblePaths(lanelet, 100, 0, False)) == 1
 
     # here we query a route through the lanelets and get all the vehicle lanelets that conflict with the shortest path
     # in that route
-    route = graph.getRoute(lanelet, toLanelet)
+    route = routing_graph.getRoute(lanelet, toLanelet)
     path = route.shortestPath()
     confLlts = [llt for llt in route.allConflictingInMap() if llt not in path]
     assert len(confLlts) > 0
 
     # for more complex queries, you can use the forEachSuccessor function and pass it a function object
-    assert hasPathFromTo(graph, lanelet, toLanelet)
+    assert hasPathFromTo(routing_graph, lanelet, toLanelet)
 
 
-def hasPathFromTo(graph, start, target):
+def hasPathFromTo(routing_graph, start, target):
     class TargetFound(BaseException):
         pass
 
@@ -258,7 +261,7 @@ def hasPathFromTo(graph, start, target):
         else:
             return True
     try:
-        graph.forEachSuccessor(start, raiseIfDestination)
+        routing_graph.forEachSuccessor(start, raiseIfDestination)
         return False
     except TargetFound:
         return True
@@ -362,7 +365,6 @@ def part7selftry():
     print(lanelets[45112])
 
 
-
     # get the actually closest <primitive_type>
     '''
     ## find the nearest lanelet around node 40736(origin)
@@ -379,28 +381,115 @@ def part7selftry():
     print(neighbor2)
     '''
 
-def part8matching():
+def part8routing():
+
+    ##########################################
+    # part1 creating and using routing graphs#
+    ##########################################
+    projector = UtmProjector(lanelet2.io.Origin(49, 8.4))
+    map = lanelet2.io.load(example_file, projector)
+    traffic_rules = lanelet2.traffic_rules.create(lanelet2.traffic_rules.Locations.Germany,
+                                                  lanelet2.traffic_rules.Participants.Vehicle)
+    routing_graph = lanelet2.routing.RoutingGraph(map, traffic_rules)
+    lanelet = map.laneletLayer[4984315]
+
+    # inspect the neighbourhood
+    assert not routing_graph.adjacentLeft(lanelet)
+    assert not routing_graph.adjacentRight(lanelet)  # right adjacent lanelets are neighbours but not reachable by lane change
+    print("adjacentRight: ", routing_graph.adjacentRight(lanelet))
+    assert routing_graph.right(lanelet) # right lanes are lane-changable neighbours
+    print("right: ", routing_graph.right(lanelet))
+    assert len(routing_graph.besides(lanelet)) == 3
+    for lane in routing_graph.besides(lanelet):
+        print("besides: ", lane)
+    assert len(routing_graph.following(lanelet)) == 1
+    assert len(routing_graph.conflicting(lanelet)) == 0
+    # find all possible paths with routing cose id 0, this will give us routes that are at least 100m long
+    paths = routing_graph.possiblePaths(lanelet, 100, 0, False) # exclude lane changing
+    assert len(paths) == 1
+    paths = routing_graph.possiblePaths(lanelet, 100, 0, True)
+    assert len(paths) == 4 # change to beside or following
+
+    # the lanelets are in an unsorted order and contain no duplicates. Also, possiblePaths discards paths that are below the cost threshold
+    # while reachable set keeps them all.
+    reachable_set = routing_graph.reachableSet(lanelet, 100, 0)
+    assert len(reachable_set) > 10
+
+    to_lanelet = map.laneletLayer[2925017]
+    shortest_path = routing_graph.shortestPath(lanelet, to_lanelet, 1) # routing cose id = 1
+    assert shortest_path
+    print("shortest path: ", shortest_path)
+
+    # Returns all succeeding lanelets from the current position that can be reached without changing lanes
+    lane = shortest_path.getRemainingLane(shortest_path[0])
+    assert not len(lane) == 0
+
+    # self-check of validation
+    routing_graph.checkValidity()
+
+
+    #####################
+    # part2 using routes#
+    #####################
+    route = routing_graph.getRoute(lanelet, to_lanelet, 0)
+    route_shortest_path = route.shortestPath()
+    assert not len(route_shortest_path) == 0
+
+    # Returns the complete lane a Lanelet belongs to
+    full_lane = route.fullLane(lanelet)
+    assert not len(full_lane) == 0
+
+    # Provides the lanelet right of a given lanelet within the Route
+    right = route.rightRelation(lanelet)
+    assert right
+
+    route_map = route.laneletSubmap()
+    assert not len(route_map.laneletLayer) == 0
+
+
+    #######################################
+    # part3 using routing graph containers#
+    #######################################
+    """
+    since routing graphs only contain primitives that are usable for one specific participant
+    we can not use them to query possible conflicts between different participants
+    
+    routing graph container can find conflicts between individual participants by comparing the topology of the different graphs
+    """
+    pedestrian_rules = lanelet2.traffic_rules.create(lanelet2.traffic_rules.Locations.Germany,
+                                                     lanelet2.traffic_rules.Participants.Pedestrian)
+    vehicle_graph = lanelet2.routing.RoutingGraph(map, traffic_rules)
+    pedestrian_graph = lanelet2.routing.RoutingGraph(map, pedestrian_rules)
+    # TODO: construct a graph container, seems no RoutingGraphContainer api
+    # graph_container = 
+    # lanelet = map.laneletLayer[4984315]
+    # intersectLanelet = map.laneletLayer[185265]
+    # assert graph_container.conflictingInGraph(lanelet, 1)
+    # assert graph_container.conflictingInGraph(intersectLanelet, 1)
+
+def part9matching():
     projector = UtmProjector(lanelet2.io.Origin(49, 8.4))
     map = lanelet2.io.load(example_file, projector)
     assert map.laneletLayer.exists(42440)
-    
+
     # create an object
-    obj = ObjectWithCovariance2d()
     translation = lanelet2.geometry.to2D(map.pointLayer[41656])
     yaw = 150. / 180. *  3.1415926
-    obj.pose = Pose2d(translation.x, translation.y, yaw)
-    # obj.absoluteHull = 
+    pose = Pose2d(translation.x, translation.y, yaw)
+    # in cpp: absoluteHull([BasicPoint2d], pose), which is different logic as in python
+    hull = []
+    position_covariance = PositionCovariance2d()
+    von_mises_kappa = 1. / (10. / 180. * 3.1415926)
+    obj = ObjectWithCovariance2d(getId(), pose, hull, position_covariance, von_mises_kappa)
 
     matches = getDeterministicMatches(map, obj, 4.)
     print("number of the matches: ", len(matches))
 
     # matches are ordered by distance
-    for i in range(1, len(matches)):
-        assert matches
-
-
-
-
+    for i in range(0, len(matches)):
+        print("the matched lanelets: ", matches[i].lanelet)
+        if i < len(matches)-1:
+            assert matches[i].distance <= matches[i+1].distance
 
 if __name__ == '__main__':
     tutorial()
