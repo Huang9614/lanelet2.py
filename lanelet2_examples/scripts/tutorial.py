@@ -32,7 +32,7 @@ def tutorial():
     part4reading_and_writing()
     part5traffic_rules()
     part6routing()
-    part7selftry()
+    part7example_map()
 
 
 def part1primitives():
@@ -275,89 +275,81 @@ def get_a_lanelet(index=0):
                    get_linestring_at_y(0+index))
 
 
-def part7selftry():
+def part7example_map():
 
-    # ---------- primitive4 lanelet ---------
-    print("primitive_lanelet")
-    primitive_lanelet = get_a_lanelet(2)
-    print("primitive_lanelet: ", primitive_lanelet)
-
-    # get left&right bound
-    right = primitive_lanelet.rightBound
-    left = primitive_lanelet.leftBound
-    print("right boundary", right)
-    print(left)
-    # TODO: primitive_lanelet.setLeftBound(new_left)
-
-    # TODO: get centerline
-    primitive_lanelet.resetCache
-    centerline = primitive_lanelet.centerline
-    #print(type(centerline))
-    print(centerline)
-
-    # invert lanelet = switch left bound and right bound, also inverse the point order in each bound
-    primitive_lanelet_inv = primitive_lanelet.invert()
-    print(primitive_lanelet_inv.rightBound)
-    print(primitive_lanelet_inv.leftBound)
-
-
-
-    # ---------- 03_lanelet_map --------------
-
-    #* read map from file
+    # ----------- read map from file ----------
     print(" *** load map from file ***")
 
     # set node 40736 as origin
     projector = UtmProjector(lanelet2.io.Origin(49.00535119589, 8.41556206437))
     # projector = LocalCartesianProjector(lanelet2.io.Origin(49.00535119589, 8.41556206437))
-
-    # example_map, load_errors = lanelet2.io.loadRobust(example_file, utm_projector)
     example_map, load_errors = lanelet2.io.loadRobust(example_file, projector)
     # print(type(example_map))
-    print("number of laneletLayer is: ", len(example_map.laneletLayer))
 
 
-    #* maps are arranged into layers, one for each primitive type
-    points = example_map.pointLayer
+    # ----------- 03_lanelet_map ----------
+
     lanelets = example_map.laneletLayer
+    regulatory_layer = example_map.regulatoryElementLayer
 
-    #* every layer behaves similar to an unordered map: we can iterate over the primitives or look them up by their id:
     # check the size of each layer
     print(f"Totally, there are {len(lanelets)} lanelets in the example_map.")
     # check whether the specific lanelet member exists or not
     assert lanelets.exists(45112)
 
-    #* iterate over the primitives
+    # every layer behaves similar to an unordered map: we can iterate over the primitives or look them up by their id:
+
+    ## iterate over the primitives
     lanelet_layer_list = []
     for each_lanelet in lanelets:
         lanelet_layer_list.append(each_lanelet)
-    print(f"All Layers are iterable, we convert the example_map.laneletLayer from {type(lanelets)} into a {type(lanelet_layer_list)} to check the lanelet_id in the laneletLayer")
-
-
-    #* select a specific lanelet with lanelet_id from laneletLayer
+    print(f"All Layers are iterable, we convert the example_map.laneletLayer from {type(lanelets)} into a {type(lanelet_layer_list)} to check the lanelet_id in the laneletLayer.\n")
+    ## select a specific lanelet with lanelet_id from laneletLayer
     lanelet_45064 = lanelets[45064]
     lanelet_45064_get = lanelets.get(45064)
     assert lanelet_45064 == lanelet_45064_get
 
-    #* quering primitive by relation
+    # quering primitive by relation
     leftbound_45064 = lanelet_45064.leftBound
-
     lanelet_45064_found_by_leftBId = lanelets.findUsages(leftbound_45064)
     # assert lanelet_45112 == lanelet_45112_found_by_leftBId
-    print("lanelet_45064 got by findUsages is: ", lanelet_45064_found_by_leftBId)
-    print("lanelet_45064 got by lanelets[lanelet_id] is:  ", lanelet_45064)
+    print("lanelet_45064 got by findUsages is: \n", lanelet_45064_found_by_leftBId,"\n")
+    print("lanelet_45064 got by lanelets[lanelet_id] is:  ", lanelet_45064, "\n")
 
-    #* quering primitive by position - additional
 
-    # get the actually closest <primitive_type>
-
+    # quering primitive by position - additional
     ## find the nearest lanelet around node 40736(origin)
     neighbor = lanelet2.geometry.findNearest(lanelets, BasicPoint2d(0,0),2)
-    print(f"We can find the any ACTUALLY nearest primitives around a point by lanelets.geometry.findNearest function.\nPoint 40736 belongs to lanelet {neighbor[0][1].id}, and the nearest lanelet is {neighbor[1][1].id}")
-
+    print(f"We can find the any ACTUALLY nearest primitives around a point by lanelets.geometry.findNearest function.\nPoint 40736 belongs to lanelet {neighbor[0][1].id}, and the nearest lanelet is {neighbor[1][1].id} \n")
     neighbor2 = lanelets.nearest(BasicPoint2d(0, 0), 1)
     # assert neighbor == neighbor2
-    print(f"We can also use the method of layer itself: lanlets.nearest() to find the nearest lanelet around point 40736, but returns different lanelet {neighbor2[0].id}")
+    print(f"We can also use the method of layer itself: lanlets.nearest() to find the nearest lanelet around point 40736, but returns different lanelet {neighbor2[0].id}\n")
+
+    # -------- 02_regelem ----------
+
+    # TODO: how to check the SpeedLimit regulatoryElement -> AS.jl line 15
+    #print("##########", type(lanelet_45064), "##########")
+    #print("speedLimits of lanelet_45064 is: ", lanelet_45064.speedLimits)
+
+    print(len(regulatory_layer))
+    regelem_layer_list = []
+    for each_regelem in regulatory_layer:
+        regelem_layer_list.append(each_regelem)
+    first_speedLimit = regelem_layer_list[1]
+
+    print(f"The first regulatory element in the regulatory element layer is {first_speedLimit} and its type is {type(first_speedLimit)}")
+
+
+    # -------- 01_primitive_lanelet --------
+
+    # get centerline
+    centerline = lanelet_45064.centerline
+    #print(type(centerline))
+    print(f"The centerline of lanelet_45064 is: \n {centerline}")
+
+    # invert lanelet = switch left bound and right bound, also inverse the point order in each bound
+    lanelet_45064_inv = lanelet_45064.invert()
+
 
 
     # --------- 06_routing -----------
@@ -377,6 +369,7 @@ def part7selftry():
     following_lanlets = graph.following(lanelet_45064)
     print(len(following_lanlets))
 
+    #* TODO: compare with AS.jl, check with functions are needed
 
 if __name__ == '__main__':
     tutorial()
