@@ -279,97 +279,180 @@ def part7example_map():
 
     # ----------- read map from file ----------
     print(" *** load map from file ***")
-
     # set node 40736 as origin
     projector = UtmProjector(lanelet2.io.Origin(49.00535119589, 8.41556206437))
-    # projector = LocalCartesianProjector(lanelet2.io.Origin(49.00535119589, 8.41556206437))
     example_map, load_errors = lanelet2.io.loadRobust(example_file, projector)
-    # print(type(example_map))
 
 
-    # ----------- 03_lanelet_map ----------
+    # ----------- methods of Layer ----------
 
-    lanelets = example_map.laneletLayer
+    laneletlayer = example_map.laneletLayer
     regulatory_layer = example_map.regulatoryElementLayer
 
-    # check the size of each layer
-    print(f"Totally, there are {len(lanelets)} lanelets in the example_map.")
-    # check whether the specific lanelet member exists or not
-    assert lanelets.exists(45112)
-
-    # every layer behaves similar to an unordered map: we can iterate over the primitives or look them up by their id:
-
-    ## iterate over the primitives
+    ## .len
+    print(f"Totally, there are {len(laneletlayer)} lanelets in the example_map.")
+    ## .exists
+    print(laneletlayer.exists(45112))
+    ## .iter
     lanelet_layer_list = []
-    for each_lanelet in lanelets:
+    for each_lanelet in laneletlayer:
         lanelet_layer_list.append(each_lanelet)
-    print(f"All Layers are iterable, we convert the example_map.laneletLayer from {type(lanelets)} into a {type(lanelet_layer_list)} to check the lanelet_id in the laneletLayer.\n")
-    ## select a specific lanelet with lanelet_id from laneletLayer
-    lanelet_45064 = lanelets[45064]
-    lanelet_45064_get = lanelets.get(45064)
+    print(f"{type(lanelet_layer_list[0])} \n")
+    ## .get and its alternative
+    lanelet_45064 = laneletlayer[45064]
+    lanelet_45064_get = laneletlayer.get(45064)
     assert lanelet_45064 == lanelet_45064_get
-
-    # quering primitive by relation
-    leftbound_45064 = lanelet_45064.leftBound
-    lanelet_45064_found_by_leftBId = lanelets.findUsages(leftbound_45064)
-    # assert lanelet_45112 == lanelet_45112_found_by_leftBId
-    print("lanelet_45064 got by findUsages is: \n", lanelet_45064_found_by_leftBId,"\n")
-    print("lanelet_45064 got by lanelets[lanelet_id] is:  ", lanelet_45064, "\n")
-
-
-    # quering primitive by position - additional
-    ## find the nearest lanelet around node 40736(origin)
-    neighbor = lanelet2.geometry.findNearest(lanelets, BasicPoint2d(0,0),2)
-    print(f"We can find the any ACTUALLY nearest primitives around a point by lanelets.geometry.findNearest function.\nPoint 40736 belongs to lanelet {neighbor[0][1].id}, and the nearest lanelet is {neighbor[1][1].id} \n")
-    neighbor2 = lanelets.nearest(BasicPoint2d(0, 0), 1)
-    # assert neighbor == neighbor2
-    print(f"We can also use the method of layer itself: lanlets.nearest() to find the nearest lanelet around point 40736, but returns different lanelet {neighbor2[0].id}\n")
-
-    # -------- 02_regelem ----------
-
-    # TODO: how to check the SpeedLimit regulatoryElement -> AS.jl line 15
-    #print("##########", type(lanelet_45064), "##########")
-    #print("speedLimits of lanelet_45064 is: ", lanelet_45064.speedLimits)
-
-    print(len(regulatory_layer))
-    regelem_layer_list = []
-    for each_regelem in regulatory_layer:
-        regelem_layer_list.append(each_regelem)
-    first_speedLimit = regelem_layer_list[1]
-
-    print(f"The first regulatory element in the regulatory element layer is {first_speedLimit} and its type is {type(first_speedLimit)}")
+    ## .search
+    nearby_lanelet = laneletlayer.search(BoundingBox2d(BasicPoint2d(0,0), BasicPoint2d(2,2)))
+    for lanelet in nearby_lanelet:
+        print(f"Inside the boundingbox, there are lanelet: {lanelet.id}\n")
+    ## .nearest and its alternative
+    neighbor = lanelet2.geometry.findNearest(laneletlayer, BasicPoint2d(0,0),1)
+    print(f"lanelet found by findNearest: {neighbor}\n")
+    neighbor2 = laneletlayer.nearest(BasicPoint2d(0, 0), 1)
+    print(f"lanelet found by nearest: {neighbor2}\n")
+    ## .findUsages
+    way_44058 = example_map.lineStringLayer[44058]
+    lanelet_45334 = laneletlayer.findUsages(way_44058)
+    print(f"lanelet_45334 found by findUsages: {lanelet_45334}\n")
 
 
-    # -------- 01_primitive_lanelet --------
+    # -------- method of lanelet --------
 
-    # get centerline
+    # .centerline
     centerline = lanelet_45064.centerline
-    #print(type(centerline))
-    print(f"The centerline of lanelet_45064 is: \n {centerline}")
+    print(f"The centerline of lanelet_45064 is:  {centerline}\n")
+    # .leftBound
+    print(f"left bound: {lanelet_45064.leftBound}\n")
+    # .rightBound
+    print(f"right bound: {lanelet_45064.rightBound}\n")
+    ## .regulatoryElements
+    for regelem in example_map.laneletLayer[45082].regulatoryElements:
+        print(f"regelem: {regelem}\n")
+    ## .trafficlights()
+    lanelet_45082 = laneletlayer[45082]
+    print("lanelet_45082 related traffic_light is: ", lanelet_45082.trafficLights(),"\n")
+    ## .rightOfWay()
+    print("lanelet_45082 related rightOfWay is: ", lanelet_45082.rightOfWay()[0], "\n")
+    ## .invert()
+    print(f"inverted lanelet_45082: {lanelet_45082.invert()} \n")
 
-    # invert lanelet = switch left bound and right bound, also inverse the point order in each bound
-    lanelet_45064_inv = lanelet_45064.invert()
 
-
-
-    # --------- 06_routing -----------
+    # --------- method of routingGraph -----------
     traffic_rules = lanelet2.traffic_rules.create(lanelet2.traffic_rules.Locations.Germany,
                                                   lanelet2.traffic_rules.Participants.Vehicle)
     graph = lanelet2.routing.RoutingGraph(example_map, traffic_rules)
 
-    #* check the neighborhood of specific lanelet_45064
-    right_reachable_lanelet_id = graph.right(lanelet_45064).id
-    print("The id of the right reachable lanelet of lanelet_45064 is: ", right_reachable_lanelet_id)
-    # right_non_reachable_lanelet_id = graph.adjacentRight(lanelet_45064)
-    # assert right_non_reachable_lanelet_id, "no non_reachable lanelet availabel!"
-    besides_lanelets = graph.besides(lanelet_45064)
-    print(besides_lanelets)
+
+    #lanelet_vehGraph_s_4984315 = laneletlayer[4984315]
+    #lanelet_vehGraph_e_7697222576222483732 = laneletlayer[7697222576222483732]
+    start_lanelet_45460_graph = laneletlayer[45300]
+    dest_lanelet_45290_graph = laneletlayer[45362]
+    
+    ## .shortestPath
+    for i in graph.shortestPath(start_lanelet_45460_graph,dest_lanelet_45290_graph):
+        print(i.id)
+    print("shortest path in graph: ", graph.shortestPath(start_lanelet_45460_graph,dest_lanelet_45290_graph))
+    ## .following
+    lanelet_with_two_follow = laneletlayer[45124]
+    for i in graph.following(lanelet_with_two_follow):
+        print("following lanelet: ",i.id,"\n")
+    ## .followingRelations
+    for j in graph.followingRelations(lanelet_with_two_follow):
+        print(f"following relations are: ", j.relationType, "\n")
+    ## .previous
+    lanelet_with_two_previous = laneletlayer[45144]
+    for i in graph.previous(lanelet_with_two_previous):
+        print("previous lanelet: ", i.id,"\n")
+    ## .previousRelations
+    for j in graph.previousRelations(lanelet_with_two_previous):
+        print(f"previous relation is: ", j.relationType, "\n")
+    ## .adjacentLeft
+    adja_lanelet = laneletlayer[3766022379599666264]
+    print(f"left but not_lane-changable lanelet: {graph.adjacentLeft(adja_lanelet).id} \n")
+    ## .reachableSet
+    for i in graph.reachableSet(adja_lanelet, 20):
+        print(f"reachable lanelet: {i.id}\n")
+    ## .routingRelation
+    print(f"routing relation is: {graph.routingRelation(laneletlayer[45362],laneletlayer[45364],0)}\n")
+    ## .possiblePaths
+    print(f"possible path from start allowing lane change: {graph.possiblePaths(laneletlayer[45358],5,0,True)}\n")
+    print(f"there are {len(graph.possiblePaths(laneletlayer[45358],30,0,True))} paths")
+    for i in graph.possiblePaths(laneletlayer[45358],30,0,True)[0]:
+        print("######",i.id,"\n")
+    
 
 
-    following_lanlets = graph.following(lanelet_45064)
-    print(len(following_lanlets))
+    ''' check the two_way lanelet 
+    # maybe two_way for specific participant. Not the case, otherwise should be one_way:bicycle = no
+    print(f"following lanelet of a two-way lanelet for vehicle: {graph.following(laneletlayer[45362])}\n")
+    traffic_rules_bicycle = lanelet2.traffic_rules.create(lanelet2.traffic_rules.Locations.Germany,
+                                                  lanelet2.traffic_rules.Participants.Bicycle)
+    graph_bicycle= lanelet2.routing.RoutingGraph(example_map, traffic_rules_bicycle)
+    print(f"following lanelet of a two-way lanelet for bicycle: {graph.following(laneletlayer[45362])}\n")
+    
+    # lanelet 45334 is an error or need to modify the implementation of following for two_way lanelets 
+    print(f"45356 has {len(graph.following(laneletlayer[45356]))} following, and the follwoing lanelet: {graph.following(laneletlayer[45356])[0].id}\n")
+    print(f"45356 has {len(graph.following(laneletlayer[45356]))} previous, previous lanelet: {graph.previous(laneletlayer[45356])[0].id}\n")
 
-    #* TODO: compare with AS.jl, check with functions are needed
+    print(f"45334 has {len(graph.following(laneletlayer[45334]))} following, and the follwoing lanelet: {graph.following(laneletlayer[45334])[0].id}\n")
+    print(f"45334 has {len(graph.following(laneletlayer[45334]))} previous, previous lanelet: {graph.previous(laneletlayer[45334])[0].id}\n")
+    '''
+    
+    
+    ## ------ method of route -------
+    s_lanelet = laneletlayer[4984315]
+    d_lanelet = laneletlayer[2925017]
+    ## .getRoute
+    route = graph.getRoute(s_lanelet,d_lanelet)
+    print("route: ",route)
+    ## .shortestPath
+    s_path = route.shortestPath()
+    for i in s_path:
+        print("lanelet belonging to the shortest path: ",i.id, "\n")
+    ## .fullLane
+    for i in route.fullLane(laneletlayer[1967009324258694641]):
+        print(f"full lane of s_lanelet: {i.id} \n")
+    ## .remainingLane
+    for i in route.remainingLane(laneletlayer[s_lanelet.id]):
+        print(f"remaining lanelets in the lane: {i.id}\n")
+    ## .remainingShortestPath
+    for i in route.remainingShortestPath(laneletlayer[236893084089463991]):
+        print(f"remain lanelets in the shortest path: {i.id}\n")
+    ## .length2d
+    print(route.length2d())
+    ## .numLanes
+    print(route.numLanes())
+    ## .size
+    print("size: ",route.size())
+    ## .fowllowingRelations
+    print("following relation: ", route.followingRelations(s_lanelet)[0].lanelet)
+    ## .previousRelations
+    print("previous relation: ", route.previousRelations(laneletlayer[1490339216733857237])[0].lanelet)
+    ## .leftRealtion
+
+    ## .leftRelations
+
+    ## .rightRelation
+
+    ## .rightRelations
+
+    ## .conflictingInRoute
+
+    ## .conflictingInMap
+    print("conflicting in map: ",route.conflictingInMap(laneletlayer[6012398680329441872])[0].id)
+    ## .allConflictingInMap
+    for i in route.allConflictingInMap():
+        print("all conflicting lanelets with the lanelets in route: ",i.id)
+    '''
+    for i in route.remainingLane(start_lanelet_45460_graph):
+        print(f"remaining lanelets: {i.id}\n")
+    print(route.length2d())
+    print(route.numLanes())
+    print(route.size())
+    '''
+
+
 
 if __name__ == '__main__':
     tutorial()
