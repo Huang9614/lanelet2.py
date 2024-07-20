@@ -276,6 +276,9 @@ def get_a_lanelet(index=0):
 
 
 def part7example_map():
+############################################################################
+# This part is used to check all the python_api for Layer, Lanelet, RoutingGraph and route, just for a more compact orgnization of these codes
+#############################################################################
 
     # ----------- read map from file ----------
     print(" *** load map from file ***")
@@ -348,7 +351,7 @@ def part7example_map():
     #lanelet_vehGraph_e_7697222576222483732 = laneletlayer[7697222576222483732]
     start_lanelet_45460_graph = laneletlayer[45300]
     dest_lanelet_45290_graph = laneletlayer[45362]
-    
+
     ## .shortestPath
     for i in graph.shortestPath(start_lanelet_45460_graph,dest_lanelet_45290_graph):
         print(i.id)
@@ -380,26 +383,26 @@ def part7example_map():
     print(f"there are {len(graph.possiblePaths(laneletlayer[45358],30,0,True))} paths")
     for i in graph.possiblePaths(laneletlayer[45358],30,0,True)[0]:
         print("######",i.id,"\n")
-    
 
 
-    ''' check the two_way lanelet 
+
+    ''' check the two_way lanelet
     # maybe two_way for specific participant. Not the case, otherwise should be one_way:bicycle = no
     print(f"following lanelet of a two-way lanelet for vehicle: {graph.following(laneletlayer[45362])}\n")
     traffic_rules_bicycle = lanelet2.traffic_rules.create(lanelet2.traffic_rules.Locations.Germany,
                                                   lanelet2.traffic_rules.Participants.Bicycle)
     graph_bicycle= lanelet2.routing.RoutingGraph(example_map, traffic_rules_bicycle)
     print(f"following lanelet of a two-way lanelet for bicycle: {graph.following(laneletlayer[45362])}\n")
-    
-    # lanelet 45334 is an error or need to modify the implementation of following for two_way lanelets 
+
+    # lanelet 45334 is an error or need to modify the implementation of following for two_way lanelets
     print(f"45356 has {len(graph.following(laneletlayer[45356]))} following, and the follwoing lanelet: {graph.following(laneletlayer[45356])[0].id}\n")
     print(f"45356 has {len(graph.following(laneletlayer[45356]))} previous, previous lanelet: {graph.previous(laneletlayer[45356])[0].id}\n")
 
     print(f"45334 has {len(graph.following(laneletlayer[45334]))} following, and the follwoing lanelet: {graph.following(laneletlayer[45334])[0].id}\n")
     print(f"45334 has {len(graph.following(laneletlayer[45334]))} previous, previous lanelet: {graph.previous(laneletlayer[45334])[0].id}\n")
     '''
-    
-    
+
+
     ## ------ method of route -------
     s_lanelet = laneletlayer[4984315]
     d_lanelet = laneletlayer[2925017]
